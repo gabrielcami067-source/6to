@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juego del Plan de Cuentas</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Arial,Helvetica,sans-serif;
+    background:linear-gradient(135deg,#111827,#1e3a5f);
+    min-height:100vh;color:#111827;display:flex;align-items:center;justify-content:center;
+    padding:18px;
+  }
+  .app{
+    width:min(720px,100%);background:#fff;border-radius:22px;
+    box-shadow:0 18px 50px rgba(0,0,0,.3);overflow:hidden;
+  }
+  header{background:#0f172a;color:#fff;padding:24px;text-align:center}
+  header h1{margin:0 0 6px;font-size:28px}
+  header p{margin:0;color:#cbd5e1}
+  .screen{padding:28px}
+  .hidden{display:none!important}
+  .welcome{text-align:center}
+  .welcome h2{font-size:24px;margin-top:0}
+  .welcome p{line-height:1.5;color:#475569}
+  input{
+    width:100%;padding:15px;border:2px solid #cbd5e1;border-radius:12px;
+    font-size:17px;margin:12px 0 18px;outline:none;
+  }
+  input:focus{border-color:#2563eb}
+  button{
+    border:0;border-radius:12px;padding:14px 18px;font-size:16px;
+    font-weight:700;cursor:pointer;transition:.15s;
+  }
+  button:hover{transform:translateY(-1px)}
+  .primary{background:#2563eb;color:#fff;width:100%}
+  .progress-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .progress-text{font-weight:700;color:#475569}
+  .bar{height:10px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-bottom:28px}
+  .bar > div{height:100%;background:#2563eb;width:2.5%;transition:.25s}
+  .question-card{
+    background:#f8fafc;border:2px solid #e2e8f0;border-radius:18px;
+    padding:25px;text-align:center;margin-bottom:20px;
+  }
+  .question-card .label{font-size:14px;color:#64748b;margin-bottom:10px}
+  .account{font-size:30px;font-weight:800;margin:0}
+  .hint{font-size:14px;color:#64748b;margin-top:10px}
+  .answers{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .answer{
+    background:#fff;border:2px solid #cbd5e1;color:#1e293b;
+    min-height:58px;
+  }
+  .answer.selected{background:#dbeafe;border-color:#2563eb;color:#1d4ed8}
+  .answer.correct{background:#dcfce7;border-color:#16a34a;color:#166534}
+  .answer.wrong{background:#fee2e2;border-color:#dc2626;color:#991b1b}
+  .nav{display:flex;gap:12px;margin-top:22px}
+  .nav button{flex:1}
+  .secondary{background:#e2e8f0;color:#0f172a}
+  .finish{background:#16a34a;color:#fff}
+  .result{text-align:center}
+  .result .score{
+    font-size:62px;font-weight:900;color:#2563eb;margin:12px 0;
+  }
+  .result .name{font-size:22px;font-weight:700}
+  .result-box{background:#f8fafc;border-radius:16px;padding:20px;margin:20px 0}
+  .result-box p{margin:8px 0}
+  .small{font-size:13px;color:#64748b}
+  @media(max-width:520px){
+    header h1{font-size:23px}.screen{padding:20px}
+    .answers{grid-template-columns:1fr}.account{font-size:25px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>📚 Juego del Plan de Cuentas</h1>
+    <p>Clasifica correctamente cada cuenta</p>
+  </header>
+
+  <section id="welcome" class="screen welcome">
+    <h2>¡Bienvenido!</h2>
+    <p>Ingresa tu nombre para comenzar. Tendrás <strong>40 preguntas</strong>, cada una con un valor de <strong>1 punto</strong>.</p>
+    <input id="studentName" type="text" maxlength="60" placeholder="Escribe tu nombre completo">
+    <button class="primary" onclick="startGame()">Comenzar juego</button>
+  </section>
+
+  <section id="game" class="screen hidden">
+    <div class="progress-row">
+      <span id="studentLabel" class="progress-text"></span>
+      <span id="counter" class="progress-text">Pregunta 1 de 40</span>
+    </div>
+    <div class="bar"><div id="progress"></div></div>
+
+    <div class="question-card">
+      <div class="label">¿A qué grupo pertenece esta cuenta?</div>
+      <p id="account" class="account"></p>
+      <div class="hint">Selecciona una opción</div>
+    </div>
+
+    <div id="answers" class="answers"></div>
+
+    <div class="nav">
+      <button id="backBtn" class="secondary" onclick="goBack()">← Atrás</button>
+      <button id="nextBtn" class="primary" onclick="goNext()">Siguiente →</button>
+      <button id="finishBtn" class="finish hidden" onclick="finishGame()">Finalizar</button>
+    </div>
+  </section>
+
+  <section id="result" class="screen result hidden">
+    <h2>🎉 Juego finalizado</h2>
+    <div class="name" id="resultName"></div>
+    <div class="result-box">
+      <div class="small">PUNTUACIÓN FINAL</div>
+      <div class="score" id="score"></div>
+      <p id="message"></p>
+    </div>
+    <button class="primary" onclick="location.reload()">Jugar nuevamente</button>
+  </section>
+</div>
+
+<script>
+const bank = [
+  ["Caja","Activo"],["Bancos","Activo"],["Cuentas por cobrar","Activo"],
+  ["Inventario de mercaderías","Activo"],["Terrenos","Activo"],["Vehículos","Activo"],
+  ["Muebles y enseres","Activo"],["Equipo de computación","Activo"],
+  ["Maquinaria","Activo"],["Edificios","Activo"],["Documentos por cobrar","Activo"],
+  ["Seguros pagados por anticipado","Activo"],["Cuentas por pagar","Pasivo"],
+  ["Documentos por pagar","Pasivo"],["Alquileres por pagar","Pasivo"],
+  ["Sueldos y salarios por pagar","Pasivo"],["Servicios básicos por pagar","Pasivo"],
+  ["Impuestos por pagar","Pasivo"],["Préstamos por pagar","Pasivo"],
+  ["Proveedores","Pasivo"],["Intereses por pagar","Pasivo"],
+  ["Anticipos de clientes","Pasivo"],["Capital","Patrimonio"],
+  ["Utilidad del ejercicio","Patrimonio"],["Pérdida del ejercicio","Patrimonio"],
+  ["Reservas","Patrimonio"],["Ventas","Ingreso"],["Otros ingresos","Ingreso"],
+  ["Ingresos por servicios","Ingreso"],["Intereses ganados","Ingreso"],
+  ["Costo de ventas","Costo"],["Compras","Costo"],["Fletes sobre compras","Costo"],
+  ["Gastos de alquiler","Gasto"],["Gastos de servicios básicos","Gasto"],
+  ["Gastos de publicidad","Gasto"],["Gastos de transporte","Gasto"],
+  ["Gastos de sueldos y salarios","Gasto"],["Gastos de mantenimiento","Gasto"],
+  ["Gastos de papelería","Gasto"]
+];
+
+const categories = ["Activo","Pasivo","Patrimonio","Ingreso","Costo","Gasto"];
+let questions = [], answers = [], current = 0, student = "";
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function startGame(){
+  const input = document.getElementById("studentName");
+  student = input.value.trim();
+  if(!student){
+    input.focus();
+    input.style.borderColor="#dc2626";
+    return;
+  }
+  questions = shuffle(bank); // Las 40 cuentas aparecen en orden aleatorio.
+  answers = Array(questions.length).fill(null);
+  current = 0;
+  document.getElementById("welcome").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  document.getElementById("studentLabel").textContent = student;
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const q = questions[current];
+  document.getElementById("account").textContent = q[0];
+  document.getElementById("counter").textContent = `Pregunta ${current+1} de ${questions.length}`;
+  document.getElementById("progress").style.width = `${((current+1)/questions.length)*100}%`;
+
+  const container = document.getElementById("answers");
+  container.innerHTML = "";
+
+  shuffle(categories).forEach(cat=>{
+    const btn = document.createElement("button");
+    btn.className = "answer";
+    btn.textContent = cat;
+    if(answers[current] === cat) btn.classList.add("selected");
+    btn.onclick = ()=>selectAnswer(cat);
+    container.appendChild(btn);
+  });
+
+  document.getElementById("backBtn").disabled = current === 0;
+  document.getElementById("backBtn").style.opacity = current === 0 ? ".5" : "1";
+  document.getElementById("nextBtn").classList.toggle("hidden", current === questions.length-1);
+  document.getElementById("finishBtn").classList.toggle("hidden", current !== questions.length-1);
+}
+
+function selectAnswer(cat){
+  answers[current] = cat;
+  renderQuestion();
+}
+
+function goNext(){
+  if(answers[current] === null){
+    alert("Selecciona una respuesta antes de continuar.");
+    return;
+  }
+  if(current < questions.length-1){
+    current++;
+    renderQuestion();
+  }
+}
+
+function goBack(){
+  if(current > 0){
+    current--;
+    renderQuestion();
+  }
+}
+
+function finishGame(){
+  if(answers[current] === null){
+    alert("Selecciona una respuesta antes de finalizar.");
+    return;
+  }
+  const unanswered = answers.filter(a=>a===null).length;
+  if(unanswered > 0){
+    alert(`Todavía tienes ${unanswered} pregunta(s) sin responder. Usa "Atrás" para revisarlas.`);
+    return;
+  }
+
+  let score = 0;
+  questions.forEach((q,i)=>{
+    if(answers[i] === q[1]) score++;
+  });
+
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("result").classList.remove("hidden");
+  document.getElementById("resultName").textContent = student;
+  document.getElementById("score").textContent = `${score} / 40`;
+
+  let message = "";
+  if(score >= 36) message = "¡Excelente trabajo! Dominas muy bien el Plan de Cuentas.";
+  else if(score >= 28) message = "¡Muy bien! Tienes un buen dominio de las cuentas.";
+  else if(score >= 20) message = "Buen esfuerzo. Conviene repasar algunas clasificaciones.";
+  else message = "Sigue practicando. ¡Puedes mejorar tu puntuación!";
+  document.getElementById("message").textContent = message;
+}
+</script>
+</body>
+</html>
